@@ -505,8 +505,7 @@ const struct gyro_reg_s reg =
 	.mem_start_addr = 0x6E,
 	.prgm_start_h   = 0x70
 #ifdef AK89xx_SECONDARY
-	,.raw_compass   = 0x49,
-	.s0_addr        = 0x25,
+	,.s0_addr       = 0x25,
 	.s0_reg         = 0x26,
 	.s0_ctrl        = 0x27,
 	.s1_addr        = 0x28,
@@ -515,7 +514,8 @@ const struct gyro_reg_s reg =
 	.s4_ctrl        = 0x34,
 	.s0_do          = 0x63,
 	.s1_do          = 0x64,
-	.i2c_delay_ctrl = 0x67
+	.i2c_delay_ctrl = 0x67,
+	.raw_compass    = 0x49
 #endif
 };
 const struct hw_s hw =
@@ -658,15 +658,27 @@ uint8_t mpu_init(struct int_param_s *int_param)
 	uint8_t data[6], rev;
 
 	/* Reset device. */
+#if defined MPU_DEBUG
+	printf("Resetting the device...\n");
+#endif
+
 	data[0] = BIT_RESET;
 	if (i2c_write(st.hw->addr, st.reg->pwr_mgmt_1, 1, data))
 		return 1;
 	delay_ms(100);
 
 	/* Wake up chip. */
+#if defined MPU_DEBUG
+	printf("Waking the chip up...\n");
+#endif
+
 	data[0] = 0x00;
 	if (i2c_write(st.hw->addr, st.reg->pwr_mgmt_1, 1, data))
 		return 1;
+
+#if defined MPU_DEBUG
+	printf("The chip is awake.\n");
+#endif
 
 #if defined MPU6050
 	/* Check product revision. */
@@ -674,9 +686,11 @@ uint8_t mpu_init(struct int_param_s *int_param)
 		return 1;
 	rev = ((data[5] & 0x01) << 2) | ((data[3] & 0x01) << 1) |
 				(data[1] & 0x01);
+
 #if defined MPU_DEBUG
 	printf_P("Software product rev. %d.\r\n", rev);
 #endif
+
 	if (rev)
 	{
 		/* Congrats, these parts are better. */
@@ -717,9 +731,15 @@ uint8_t mpu_init(struct int_param_s *int_param)
 	}
 #elif defined MPU6500
 #define MPU6500_MEM_REV_ADDR    (0x17)
+
+#if defined MPU_DEBUG
+	printf("Reading revision number for MPU6500...\n");
+#endif
+	st.chip_cfg.sensors = 0x1; // HACK: mpu_read_mem should not check for this during init.
 	if (mpu_read_mem(MPU6500_MEM_REV_ADDR, 1, &rev))
 		return 1;
-	if (rev == 0x1)
+	st.chip_cfg.sensors = 0x0; // Revert
+	if (rev == 0x1 || rev == 0x3)
 		st.chip_cfg.accel_half = 0;
 	else
 	{
@@ -728,6 +748,10 @@ uint8_t mpu_init(struct int_param_s *int_param)
 #endif
 		return 1;
 	}
+
+#if defined MPU_DEBUG
+	printf("Setting up the FIFO buffer.\n");
+#endif
 
 	/* MPU6500 shares 4kB of memory between the DMP and the FIFO. Since the
 	 * first 3kB are needed by the DMP, we'll use the last 1kB for the FIFO.
@@ -760,6 +784,9 @@ uint8_t mpu_init(struct int_param_s *int_param)
 	st.chip_cfg.dmp_loaded = 0;
 	st.chip_cfg.dmp_sample_rate = 0;
 
+#ifdef MPU_DEBUG
+	printf("Setting up scale factors, sample rate and fifo.");
+#endif
 	if (mpu_set_gyro_fsr(2000))
 		return 1;
 	if (mpu_set_accel_fsr(2))
@@ -1667,7 +1694,7 @@ uint8_t mpu_read_fifo(int16_t *gyro, int16_t *accel,
 	if (fifo_count < packet_size)
 		return 0;
 #if defined MPU_DEBUG
-    printf_P("FIFO count: %hd\r\n", fifo_count);
+    //printf_P("FIFO count: %hd\r\n", fifo_count);
 #endif
 	if (fifo_count > (st.hw->max_fifo >> 1))
 	{
@@ -1757,7 +1784,7 @@ uint8_t mpu_read_fifo_stream(uint16_t length, uint8_t *data,
 		}
 	}
 #if defined MPU_DEBUG
-    printf_P("FIFO count: %hd\r\n", fifo_count);
+    //printf_P("FIFO count: %hd\r\n", fifo_count);
 #endif
 
 	if (i2c_read(st.hw->addr, st.reg->fifo_r_w, length, data))
