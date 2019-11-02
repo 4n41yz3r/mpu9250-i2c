@@ -11,6 +11,7 @@ extern float accel[3];
 extern float gyro[3];
 extern float temp;
 extern float compass[3];
+extern float quat[4];
 
 extern int ms_open();
 extern int ms_update();

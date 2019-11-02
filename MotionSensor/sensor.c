@@ -36,6 +36,7 @@ int16_t sensors;
 
 float ypr[3];
 Quaternion q; 
+float quat[4];
 float temp;
 float gyro[3];
 float accel[3];
@@ -143,6 +144,8 @@ int ms_update() {
 	) ; //gyro and accel can be null because of being disabled in the efeatures
 
 	q = _q;
+	Quaternion qqq = q.getNormalized();
+	quat[0] = qqq.w; quat[1] = qqq.x; quat[2] = qqq.y; quat[3] = qqq.z;
 	GetGravity(&gravity, &q);
 	GetYawPitchRoll(ypr, &q, &gravity);
 
