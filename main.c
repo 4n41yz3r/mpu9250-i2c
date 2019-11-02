@@ -13,7 +13,7 @@ int main() {
 
 	do {
 		ms_update();
-		printf("yaw: %2.1f\tpitch: %2.1f\troll: %2.1f\ttemp: %2.1f\tcomp: %2.1f, %2.1f, %2.1f\n",
+		printf("yaw: %2.1f\tpitch: %2.1f\troll: %2.1f\ttemp: %2.1f\tmag: %2.1f, %2.1f, %2.1f\n",
 			ypr[YAW], ypr[PITCH], ypr[ROLL], temp, compass[0], compass[1], compass[2]);
 		delay_ms(5);
 	}
